@@ -7,7 +7,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 public class TRNetworking {
 
 	public static void registerPayloads() {
-		PayloadTypeRegistry.playC2S().register(RefreshToServer.TYPE, RefreshToServer.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(RefreshToServer.TYPE, RefreshToServer.CODEC);
 	}
 
 	public static void initServer() {

@@ -1,11 +1,8 @@
 plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'maven-publish'
-    id "com.modrinth.minotaur" version "2.+"
+    id "com.modrinth.minotaur" version "2.10.0"
 }
-
-version = mod_version
-group = mod_group_id
 
 version = mod_version
 group = mod_group_id
@@ -40,6 +37,17 @@ dependencies {
     runtimeOnly "mezz.jei:jei-${jei_minecraft_version}-fabric:${jei_version}"
 }
 
+// JEI 29.2.0.20 publishes internal dependencies with the incorrect "build" group.
+// Keep transitive dependencies, but resolve those modules from their real group.
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "build" && requested.name.startsWith("jei-")) {
+            useTarget("mezz.jei:${requested.name}:${requested.version}")
+            because("JEI's published internal modules belong to mezz.jei, not build")
+        }
+    }
+}
+
 processResources {
     def version = project.version
     inputs.property "version", version
@@ -61,6 +69,10 @@ java {
 }
 
 jar {
+    def licenseName = "LICENSE_${project.mod_id}"
+    from("LICENSE") {
+        rename { licenseName }
+    }
 }
 
 publishing {
@@ -79,7 +91,8 @@ modrinth {
     versionName = "Trade Refresh ${project.mod_version}"
     versionNumber = project.mod_version
     versionType = "release"
-    uploadFile = remapJar
+    // Minecraft 26.1+ is unobfuscated; Loom produces the distributable with jar.
+    uploadFile = tasks.named("jar")
     gameVersions = ["26.1", "26.1.1", "26.1.2"]
     loaders = ["fabric"]
     changelog = new File('./changelog.txt').text.split("\n\n")[0]
@@ -87,4 +100,9 @@ modrinth {
         required.project "fabric-api"
         optional.project "jei"
     }
+}
+
+// Allow the smoke test (and developers) to shut down the server cleanly.
+tasks.named("runServer") {
+    standardInput = System.in
 }
