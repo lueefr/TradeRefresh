@@ -43,8 +43,8 @@ jobs:
         log = Path("gradle-build.log")
         if log.exists():
             lines = log.read_text().splitlines()[-300:]
-            for offset in range(0, len(lines), 10):
-                message = "\n".join(lines[offset:offset + 10])
+            for offset in range(0, len(lines), 30):
+                message = "\n".join(lines[offset:offset + 30])
                 message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
                 print(f"::notice title=Gradle diagnostics::{message}")
 

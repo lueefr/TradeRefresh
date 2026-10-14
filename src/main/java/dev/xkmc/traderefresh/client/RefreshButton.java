@@ -9,8 +9,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -37,20 +36,23 @@ public class RefreshButton {
 	public static void register(MerchantScreen screen) {
 		RefreshButton button = new RefreshButton(screen);
 
-		ScreenEvents.afterRender(screen).register((scr, guiGraphics, mouseX, mouseY, partialTick) -> {
+		ScreenEvents.afterExtract(screen).register((scr, guiGraphics, mouseX, mouseY, partialTick) -> {
 			button.render(guiGraphics, mouseX, mouseY, partialTick);
 		});
 
-		ScreenMouseEvents.afterMouseClick(screen).register((scr, mouseX, mouseY, mouseButton) -> {
-			button.onMouseClick(mouseX, mouseY, mouseButton);
+		ScreenMouseEvents.afterMouseClick(screen).register((scr, event, consumed) -> {
+			button.onMouseClick(event.x(), event.y(), event.button());
+			return consumed || button.pressed;
 		});
 
-		ScreenMouseEvents.afterMouseRelease(screen).register((scr, mouseX, mouseY, mouseButton) -> {
-			button.onMouseRelease(mouseX, mouseY, mouseButton);
+		ScreenMouseEvents.afterMouseRelease(screen).register((scr, event, consumed) -> {
+			boolean wasPressed = button.pressed;
+			button.onMouseRelease(event.x(), event.y(), event.button());
+			return consumed || wasPressed;
 		});
 
-		ScreenKeyboardEvents.afterKeyPress(screen).register((scr, key, scancode, modifiers) -> {
-			if (Keys.REFRESH.map.matches(key, scancode)) {
+		ScreenKeyboardEvents.afterKeyPress(screen).register((scr, event) -> {
+			if (Keys.REFRESH.map.matches(event)) {
 				TradeScreenEventHandler.tryRefresh(screen, true);
 			}
 		});
@@ -58,16 +60,16 @@ public class RefreshButton {
 
 	private int getX() {
 		if (TRConfig.CLIENT.buttonSide == TRConfig.ButtonSide.LEFT) {
-			return parent.getGuiLeft() + 102;
+			return parent.leftPos + 102;
 		}
-		return parent.getGuiLeft() + parent.getXSize() - 22;
+		return parent.leftPos + parent.imageWidth - 22;
 	}
 
 	private int getY() {
 		if (TRConfig.CLIENT.buttonSide == TRConfig.ButtonSide.LEFT) {
-			return parent.getGuiTop() + 17;
+			return parent.topPos + 17;
 		}
-		return parent.getGuiTop() + 4;
+		return parent.topPos + 4;
 	}
 
 	private boolean isActive() {
@@ -95,7 +97,7 @@ public class RefreshButton {
 		}
 	}
 
-	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+	public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
 		boolean active = isActive();
 		boolean hovered = isMouseOver(mouseX, mouseY);
 
@@ -126,7 +128,7 @@ public class RefreshButton {
 			} else {
 				tooltip = Component.translatable("traderefresh.button.disabled");
 			}
-			guiGraphics.renderTooltip(Minecraft.getInstance().font, tooltip, mouseX, mouseY);
+			guiGraphics.setTooltipForNextFrame(Minecraft.getInstance().font, tooltip, mouseX, mouseY);
 		}
 	}
 

@@ -1,8 +1,12 @@
 accessWidener v2 official
 
-accessible field net/minecraft/world/inventory/MerchantMenu trader Lnet/minecraft/world/entity/npc/Merchant;
+accessible field net/minecraft/world/inventory/MerchantMenu trader Lnet/minecraft/world/item/trading/Merchant;
 accessible method net/minecraft/world/entity/npc/villager/Villager resetNumberOfRestocks ()V
 accessible method net/minecraft/world/entity/npc/villager/Villager needsToRestock ()Z
 accessible method net/minecraft/world/entity/npc/villager/Villager updateTrades (Lnet/minecraft/server/level/ServerLevel;)V
 accessible method net/minecraft/world/entity/npc/villager/Villager startTrading (Lnet/minecraft/world/entity/player/Player;)V
 accessible method net/minecraft/world/entity/player/Player doCloseContainer ()V
+
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen leftPos I
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen topPos I
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen imageWidth I
