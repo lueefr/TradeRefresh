@@ -30,6 +30,9 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
+    - name: List Gradle tasks
+      run: ./gradlew tasks --all 2>&1 | grep -i "jar\|build" | head -30
+      
     - name: Build with Gradle
       id: build
       run: ./gradlew build --stacktrace 2>&1 | tee build.log
