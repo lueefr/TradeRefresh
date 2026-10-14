@@ -39,24 +39,24 @@ jobs:
       timeout-minutes: 8
       run: python3 .github/scripts/server-smoke-test.py
 
-    - name: Report build diagnostics
-      if: failure()
+    - name: Verify distributable JAR
+      run: python3 .github/scripts/verify-jar.py
+
+    - name: Report build and smoke-test logs
+      if: always()
       shell: python
       run: |
         from pathlib import Path
         logs = [Path("gradle-build.log"), Path("server-smoke.log")]
-        lines = []
-        for log in logs:
-            if log.exists():
-                lines.extend(log.read_text().splitlines()[-150:])
-        if lines:
-            for offset in range(0, len(lines), 30):
-                message = "\n".join(lines[offset:offset + 30])
-                message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-                print(f"::notice title=Gradle diagnostics::{message}")
-
-    - name: Verify distributable JAR
-      run: python3 .github/scripts/verify-jar.py
+        text = "\n".join(f"=== {log.name} ===\n{log.read_text()}" for log in logs if log.exists())
+        # Check annotations remain available through the API when log downloads are unavailable.
+        # Keep within GitHub's ten notices per step and annotation size limits.
+        if len(text) > 400000:
+            text = "Earlier output truncated; see workflow logs.\n" + text[-399900:]
+        for offset in range(0, len(text), 40000):
+            message = text[offset:offset + 40000]
+            message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            print(f"::notice title=Build logs part {offset // 40000 + 1}::{message}")
 
     - name: Upload JAR
       uses: actions/upload-artifact@v6
