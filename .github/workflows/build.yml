@@ -61,7 +61,11 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: mod-jar
-        path: build/libs/*.jar
+        path: |
+          build/libs/*.jar
+          build/devlibs/*.jar
+          build/**/*.jar
+        if-no-files-found: error
         
   release:
     needs: build
