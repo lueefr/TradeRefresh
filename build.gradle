@@ -37,6 +37,17 @@ dependencies {
     runtimeOnly "mezz.jei:jei-${jei_minecraft_version}-fabric:${jei_version}"
 }
 
+// JEI 29.2.0.20 publishes internal dependencies with the incorrect "build" group.
+// Keep transitive dependencies, but resolve those modules from their real group.
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "build" && requested.name.startsWith("jei-")) {
+            useTarget("mezz.jei:${requested.name}:${requested.version}")
+            because("JEI's published internal modules belong to mezz.jei, not build")
+        }
+    }
+}
+
 processResources {
     def version = project.version
     inputs.property "version", version
