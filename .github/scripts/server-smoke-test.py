@@ -1,4 +1,5 @@
 """Start the mod on a dedicated Fabric server, then require a clean shutdown."""
+import json
 import os
 from pathlib import Path
 import queue
@@ -11,9 +12,18 @@ run = Path("run")
 run.mkdir(exist_ok=True)
 # Acceptance applies only to this disposable CI test server.
 (run / "eula.txt").write_text("eula=true\n")
+generator = json.dumps({
+    "biome": "minecraft:plains",
+    "layers": [
+        {"block": "minecraft:bedrock", "height": 1},
+        {"block": "minecraft:dirt", "height": 2},
+        {"block": "minecraft:grass_block", "height": 1},
+    ],
+})
 (run / "server.properties").write_text(
     "online-mode=false\nserver-ip=127.0.0.1\nview-distance=2\n"
     "simulation-distance=2\nlevel-type=minecraft:flat\nmax-players=1\n"
+    f"generator-settings={generator}\n"
 )
 process = subprocess.Popen(
     ["./gradlew", "runServer", "--no-configuration-cache", "--console=plain"],
@@ -55,6 +65,9 @@ try:
     result = process.wait(timeout=10)
     assert started, "Dedicated server exited before reaching ready state"
     assert result == 0, f"Dedicated server failed with exit code {result}"
+    output = Path("server-smoke.log").read_text()
+    assert "- traderefresh " in output, "Trade Refresh was not loaded"
+    assert "/ERROR]" not in output and "/FATAL]" not in output, "Server logged a runtime error"
     print("Dedicated server smoke test passed: startup and clean shutdown")
 finally:
     if process.poll() is None:
