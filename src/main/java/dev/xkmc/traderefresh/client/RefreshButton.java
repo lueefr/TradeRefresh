@@ -3,19 +3,29 @@ package dev.xkmc.traderefresh.client;
 import dev.xkmc.traderefresh.init.Keys;
 import dev.xkmc.traderefresh.init.TRConfig;
 import dev.xkmc.traderefresh.init.TradeRefresh;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
-public class RefreshButton {
+/**
+ * Refresh button shown on the merchant screen.
+ *
+ * <p>The button is registered as a regular screen widget, so it is extracted
+ * together with the rest of the screen and stays inside the screen's render
+ * transforms (for example SmoothGui's animated translation). The widget
+ * tooltip is emitted in the deferred tooltip pass and therefore always draws
+ * above the button.
+ */
+public class RefreshButton extends Button {
 
 	private static final Identifier TEXTURE_NORMAL = TradeRefresh.loc("textures/gui/refresh_button.png");
 	private static final Identifier TEXTURE_DISABLED = TradeRefresh.loc("textures/gui/refresh_button_disabled.png");
@@ -30,26 +40,16 @@ public class RefreshButton {
 	private boolean pressed;
 
 	public RefreshButton(MerchantScreen parent) {
+		super(getButtonX(parent), getButtonY(parent), WIDTH, HEIGHT,
+				Component.translatable("traderefresh.button.narration"),
+				b -> {
+				},
+				DEFAULT_NARRATION);
 		this.parent = parent;
 	}
 
 	public static void register(MerchantScreen screen) {
-		RefreshButton button = new RefreshButton(screen);
-
-		ScreenEvents.afterExtract(screen).register((scr, guiGraphics, mouseX, mouseY, partialTick) -> {
-			button.render(guiGraphics, mouseX, mouseY, partialTick);
-		});
-
-		ScreenMouseEvents.afterMouseClick(screen).register((scr, event, consumed) -> {
-			button.onMouseClick(event.x(), event.y(), event.button());
-			return consumed || button.pressed;
-		});
-
-		ScreenMouseEvents.afterMouseRelease(screen).register((scr, event, consumed) -> {
-			boolean wasPressed = button.pressed;
-			button.onMouseRelease(event.x(), event.y(), event.button());
-			return consumed || wasPressed;
-		});
+		Screens.getWidgets(screen).add(new RefreshButton(screen));
 
 		ScreenKeyboardEvents.afterKeyPress(screen).register((scr, event) -> {
 			if (Keys.REFRESH.map.matches(event)) {
@@ -58,78 +58,77 @@ public class RefreshButton {
 		});
 	}
 
-	private int getX() {
+	private static int getButtonX(MerchantScreen parent) {
 		if (TRConfig.CLIENT.buttonSide == TRConfig.ButtonSide.LEFT) {
 			return parent.leftPos + 102;
 		}
 		return parent.leftPos + parent.imageWidth - 22;
 	}
 
-	private int getY() {
+	private static int getButtonY(MerchantScreen parent) {
 		if (TRConfig.CLIENT.buttonSide == TRConfig.ButtonSide.LEFT) {
 			return parent.topPos + 17;
 		}
 		return parent.topPos + 4;
 	}
 
-	private boolean isActive() {
-		return TRConfig.SERVER.alwaysAllowRefresh || parent.getMenu().getTraderXp() == 0;
+	@Override
+	public int getX() {
+		return getButtonX(parent);
 	}
 
-	private boolean isMouseOver(double mouseX, double mouseY) {
-		int x = getX();
-		int y = getY();
-		return mouseX >= x && mouseX < x + WIDTH && mouseY >= y && mouseY < y + HEIGHT;
+	@Override
+	public int getY() {
+		return getButtonY(parent);
 	}
 
-	private void onMouseClick(double mouseX, double mouseY, int button) {
-		if (button == 0 && isActive() && isMouseOver(mouseX, mouseY)) {
-			pressed = true;
-		}
-	}
+	@Override
+	protected void extractContents(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+		this.active = TRConfig.SERVER.alwaysAllowRefresh || parent.getMenu().getTraderXp() == 0;
 
-	private void onMouseRelease(double mouseX, double mouseY, int button) {
-		if (button == 0 && pressed) {
-			if (isMouseOver(mouseX, mouseY) && isActive()) {
-				TradeScreenEventHandler.tryRefresh(parent, false);
+		if (this.active) {
+			Component tooltip = Component.translatable("traderefresh.button.tooltip",
+					Keys.REFRESH.map.getTranslatedKeyMessage());
+			String recipeViewerName = getRecipeViewerName();
+			if (recipeViewerName != null) {
+				tooltip = tooltip.copy().append("\n")
+						.append(Component.translatable("traderefresh.tooltip_recipe_viewer", recipeViewerName)
+								.withStyle(ChatFormatting.GRAY));
 			}
-			pressed = false;
+			this.setTooltip(Tooltip.create(tooltip));
+		} else {
+			this.setTooltip(Tooltip.create(Component.translatable("traderefresh.button.disabled")));
 		}
-	}
-
-	public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-		boolean active = isActive();
-		boolean hovered = isMouseOver(mouseX, mouseY);
 
 		Identifier texture;
-		if (!active) {
+		if (!this.active) {
 			texture = TEXTURE_DISABLED;
 		} else if (pressed) {
-			texture = hovered ? TEXTURE_PRESSED_HIGHLIGHTED : TEXTURE_PRESSED;
-		} else if (hovered) {
+			texture = this.isHovered() ? TEXTURE_PRESSED_HIGHLIGHTED : TEXTURE_PRESSED;
+		} else if (this.isHovered()) {
 			texture = TEXTURE_HIGHLIGHTED;
 		} else {
 			texture = TEXTURE_NORMAL;
 		}
 
 		guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, getX(), getY(), 0, 0, WIDTH, HEIGHT, WIDTH, HEIGHT);
+	}
 
-		if (hovered) {
-			Component tooltip;
-			if (active) {
-				tooltip = Component.translatable("traderefresh.button.tooltip",
-						Keys.REFRESH.map.getTranslatedKeyMessage());
-				String recipeViewerName = getRecipeViewerName();
-				if (recipeViewerName != null) {
-					tooltip = tooltip.copy().append("\n")
-							.append(Component.translatable("traderefresh.tooltip_recipe_viewer", recipeViewerName)
-									.withStyle(ChatFormatting.GRAY));
-				}
-			} else {
-				tooltip = Component.translatable("traderefresh.button.disabled");
-			}
-			guiGraphics.setTooltipForNextFrame(Minecraft.getInstance().font, tooltip, mouseX, mouseY);
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (this.active && this.isMouseOver(event.x(), event.y())) {
+			pressed = true;
 		}
+		return super.mouseClicked(event, doubleClick);
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		if (this.isHovered() && this.active) {
+			TradeScreenEventHandler.tryRefresh(parent, false);
+		}
+		pressed = false;
+		return super.mouseReleased(event);
 	}
 
 	private static String getRecipeViewerName() {
