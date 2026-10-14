@@ -33,7 +33,7 @@ jobs:
     - name: Build with Gradle
       id: build
       continue-on-error: true
-      run: ./gradlew remapJar --stacktrace 2>&1 | tee build.log
+      run: ./gradlew build --stacktrace 2>&1 | tee build.log
       
     - name: List build output
       if: always()
@@ -46,6 +46,9 @@ jobs:
         echo ""
         echo "=== build/libs/ contents ==="
         ls -lah build/libs/ 2>/dev/null || echo "build/libs/ does not exist"
+        echo ""
+        echo "=== Last 100 lines of build.log ==="
+        tail -100 build.log 2>/dev/null || echo "build.log not found"
       
     - name: Upload build log
       if: always()
