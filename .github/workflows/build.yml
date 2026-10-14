@@ -35,14 +35,21 @@ jobs:
         set -o pipefail
         ./gradlew clean build --console=plain 2>&1 | tee gradle-build.log
 
+    - name: Dedicated server smoke test
+      timeout-minutes: 8
+      run: python3 .github/scripts/server-smoke-test.py
+
     - name: Report build diagnostics
       if: failure()
       shell: python
       run: |
         from pathlib import Path
-        log = Path("gradle-build.log")
-        if log.exists():
-            lines = log.read_text().splitlines()[-300:]
+        logs = [Path("gradle-build.log"), Path("server-smoke.log")]
+        lines = []
+        for log in logs:
+            if log.exists():
+                lines.extend(log.read_text().splitlines()[-150:])
+        if lines:
             for offset in range(0, len(lines), 30):
                 message = "\n".join(lines[offset:offset + 30])
                 message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")

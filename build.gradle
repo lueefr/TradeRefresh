@@ -69,8 +69,9 @@ java {
 }
 
 jar {
+    def licenseName = "LICENSE_${project.mod_id}"
     from("LICENSE") {
-        rename { "${it}_${project.mod_id}" }
+        rename { licenseName }
     }
 }
 
@@ -99,4 +100,9 @@ modrinth {
         required.project "fabric-api"
         optional.project "jei"
     }
+}
+
+// Allow the smoke test (and developers) to shut down the server cleanly.
+tasks.named("runServer") {
+    standardInput = System.in
 }
