@@ -61,9 +61,6 @@ java {
 }
 
 jar {
-    from("LICENSE") {
-        rename { "${it}_${mod_id}" }
-    }
 }
 
 publishing {
