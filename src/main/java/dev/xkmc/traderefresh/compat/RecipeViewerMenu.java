@@ -1,14 +1,14 @@
 package dev.xkmc.traderefresh.compat;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
-import net.neoforged.fml.ModList;
 
 public class RecipeViewerMenu {
 
 	public static boolean anythingMatched(MerchantMenu menu) {
-		if (ModList.get().isLoaded("jei")) {
+		if (FabricLoader.getInstance().isModLoaded("jei")) {
 			try {
 				if (JeiImpl.anythingMatched(menu)) return true;
 			} catch (Throwable ignored) {
@@ -31,7 +31,7 @@ public class RecipeViewerMenu {
 				ItemStack.isSameItemSameComponents(chosen, avail);
 	}
 
-	private static class JeiImpl {
+	static class JeiImpl {
 
 		static boolean anythingMatched(MerchantMenu menu) {
 			var runtime = MyJeiPlugin.getRuntime();

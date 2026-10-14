@@ -1,21 +1,32 @@
 package dev.xkmc.traderefresh.network;
 
-import dev.xkmc.l2serial.network.SerialPacketBase;
-import dev.xkmc.l2serial.serialization.marker.SerialClass;
 import dev.xkmc.traderefresh.init.TRConfig;
+import dev.xkmc.traderefresh.init.TradeRefresh;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MerchantMenu;
 
-@SerialClass
-public record RefreshToServer() implements SerialPacketBase<RefreshToServer> {
+public record RefreshToServer() implements CustomPacketPayload {
+
+	public static final CustomPacketPayload.Type<RefreshToServer> TYPE =
+			new CustomPacketPayload.Type<>(TradeRefresh.loc("refresh_to_server"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, RefreshToServer> CODEC =
+			StreamCodec.unit(new RefreshToServer());
 
 	@Override
-	public void handle(Player player) {
+	public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
+
+	public static void handle(RefreshToServer packet, ServerPlayer player) {
 		if (!(player.containerMenu instanceof MerchantMenu gui)) return;
 		if (!(gui.trader instanceof Villager villager)) return;
-		if (TRConfig.SERVER.alwaysAllowRefresh.get()) {
+		if (TRConfig.SERVER.alwaysAllowRefresh) {
 			if (!(player.level() instanceof ServerLevel sl)) return;
 			player.doCloseContainer();
 			var offer = villager.getOffers();

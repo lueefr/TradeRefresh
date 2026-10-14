@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "traderefresh",
+	"version": "${version}",
+	"name": "Trade Refresh",
+	"description": "Easy to use villager trade refresh button",
+	"authors": [
+		"lcy0x1"
+	],
+	"license": "LGPL-2.1",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.xkmc.traderefresh.init.TradeRefresh"
+		],
+		"client": [
+			"dev.xkmc.traderefresh.init.TradeRefreshClient"
+		]
+	},
+	"accessWidener": "traderefresh.classtweaker",
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": ">=26.1 <=26.1.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"jei": "*"
+	}
+}
