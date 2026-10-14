@@ -33,9 +33,12 @@ jobs:
     - name: List Gradle tasks
       run: ./gradlew tasks --all 2>&1 | grep -i "jar\|build" | head -30
       
-    - name: Build with Gradle
+    - name: Build JAR
       id: build
-      run: ./gradlew build --rerun-tasks --stacktrace 2>&1 | tee build.log
+      run: ./gradlew jar --stacktrace 2>&1 | tee build.log
+      
+    - name: Remap JAR
+      run: ./gradlew remapJar --stacktrace 2>&1 | tee -a build.log
       
     - name: List build output
       if: always()
