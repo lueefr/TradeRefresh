@@ -51,12 +51,12 @@ jobs:
         text = "\n".join(f"=== {log.name} ===\n{log.read_text()}" for log in logs if log.exists())
         # Check annotations remain available through the API when log downloads are unavailable.
         # Keep within GitHub's ten notices per step and annotation size limits.
-        if len(text) > 400000:
-            text = "Earlier output truncated; see workflow logs.\n" + text[-399900:]
-        for offset in range(0, len(text), 40000):
-            message = text[offset:offset + 40000]
+        if len(text) > 35000:
+            text = "Earlier output truncated; see workflow logs.\n" + text[-34900:]
+        for offset in range(0, len(text), 3500):
+            message = text[offset:offset + 3500]
             message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-            print(f"::notice title=Build logs part {offset // 40000 + 1}::{message}")
+            print(f"::notice title=Build logs part {offset // 3500 + 1}::{message}")
 
     - name: Upload JAR
       uses: actions/upload-artifact@v6
