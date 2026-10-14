@@ -35,7 +35,7 @@ jobs:
       
     - name: Build with Gradle
       id: build
-      run: ./gradlew build --stacktrace 2>&1 | tee build.log
+      run: ./gradlew build --rerun-tasks --stacktrace 2>&1 | tee build.log
       
     - name: List build output
       if: always()
