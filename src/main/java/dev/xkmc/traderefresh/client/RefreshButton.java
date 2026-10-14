@@ -36,7 +36,9 @@ public class RefreshButton {
 	public static void register(MerchantScreen screen) {
 		RefreshButton button = new RefreshButton(screen);
 
-		ScreenEvents.afterExtract(screen).register((scr, guiGraphics, mouseX, mouseY, partialTick) -> {
+		// Render with the container foreground: this keeps the button inside screen transforms
+		// (for example SmoothGui's animated translation) and leaves tooltips above it.
+		ScreenEvents.afterForeground(screen).register((scr, guiGraphics, mouseX, mouseY, partialTick) -> {
 			button.render(guiGraphics, mouseX, mouseY, partialTick);
 		});
 
