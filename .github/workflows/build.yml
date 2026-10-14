@@ -40,6 +40,13 @@ jobs:
     - name: Remap JAR
       run: ./gradlew remapJar --stacktrace 2>&1 | tee -a build.log
       
+    - name: Check JAR immediately
+      run: |
+        echo "=== Checking for JARs immediately after remapJar ==="
+        find . -name "*.jar" -type f 2>/dev/null | head -20
+        ls -lah build/libs/ 2>/dev/null || echo "build/libs/ does not exist"
+        ls -lah build/ 2>/dev/null | head -20 || echo "build/ does not exist"
+      
     - name: List build output
       if: always()
       run: |
