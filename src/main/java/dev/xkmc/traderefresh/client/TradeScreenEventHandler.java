@@ -1,69 +1,59 @@
 package dev.xkmc.traderefresh.client;
 
 import dev.xkmc.traderefresh.compat.RecipeViewerMenu;
-import dev.xkmc.traderefresh.init.Keys;
 import dev.xkmc.traderefresh.init.TRConfig;
 import dev.xkmc.traderefresh.init.TradeRefresh;
 import dev.xkmc.traderefresh.network.RefreshToServer;
+import dev.xkmc.traderefresh.network.TRNetworking;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.inventory.MerchantMenu;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
 
-@EventBusSubscriber(value = Dist.CLIENT, modid = TradeRefresh.MODID)
 public class TradeScreenEventHandler {
 
 	private static int pendingRecipeViewerCheck = 0;
-
-	@SubscribeEvent
-	public static void onInventoryGuiInit(ScreenEvent.Init.Post evt) {
-		if (evt.getScreen() instanceof MerchantScreen gui)
-			evt.addListener(new RefreshButton(gui));
-	}
-
-	@SubscribeEvent(priority = EventPriority.HIGH)
-	public static void onKeyPressed(ScreenEvent.KeyPressed.Pre evt) {
-		if (evt.getScreen() instanceof MerchantScreen gui) {
-			if (Keys.REFRESH.map.matches(evt.getKeyEvent())) {
-				tryRefresh(gui, true);
-			}
-		}
-	}
-
 	private static MerchantMenu staller = null;
+
+	public static void init() {
+		ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+			if (screen instanceof MerchantScreen merchantScreen) {
+				RefreshButton.register(merchantScreen);
+			}
+		});
+
+		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			onClientTick(client);
+		});
+	}
 
 	public static void tryRefresh(MerchantScreen gui, boolean playSound) {
 		if (staller == gui.getMenu()) return;
 		if (RecipeViewerMenu.anythingMatched(gui.getMenu())) {
 			return;
 		}
-		if (!TRConfig.SERVER.alwaysAllowRefresh.get() && gui.getMenu().getTraderXp() > 0) {
+		if (!TRConfig.SERVER.alwaysAllowRefresh && gui.getMenu().getTraderXp() > 0) {
 			return;
 		}
 		if (playSound) {
 			Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
 		}
 		staller = gui.getMenu();
-		TradeRefresh.HANDLER.toServer(new RefreshToServer());
+		TRNetworking.sendToServer(new RefreshToServer());
 		pendingRecipeViewerCheck = 20;
 	}
 
-	@SubscribeEvent
-	public static void onClientTick(ClientTickEvent.Post evt) {
+	private static void onClientTick(Minecraft client) {
 		if (pendingRecipeViewerCheck <= 0) return;
 		pendingRecipeViewerCheck--;
-		if (Minecraft.getInstance().screen instanceof MerchantScreen gui) {
+		if (client.screen instanceof MerchantScreen gui) {
 			if (staller == gui.getMenu()) return;
 			if (RecipeViewerMenu.anythingMatched(gui.getMenu())) {
 				pendingRecipeViewerCheck = 0;
-				Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.0F));
+				client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.0F));
 			}
 		}
 	}

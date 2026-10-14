@@ -1,79 +1,83 @@
 package dev.xkmc.traderefresh.init;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
-import net.neoforged.fml.ModLoadingContext;
-import net.neoforged.fml.config.IConfigSpec;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.TranslatableEnum;
-import org.apache.commons.lang3.tuple.Pair;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class TRConfig {
 
-	public static class Client {
-
-		public final ModConfigSpec.BooleanValue showEnchProperties;
-		public final ModConfigSpec.EnumValue<ButtonSide> buttonSide;
-
-		Client(ModConfigSpec.Builder builder) {
-			showEnchProperties = builder.comment("Show enchantment properties like tradeable and enchantable")
-					.comment("Will not work when Apotheosis is installed")
-					.define("showEnchProperties", false);
-			buttonSide = builder.comment("Which side of the screen to place the refresh button")
-					.defineEnum("buttonSide", ButtonSide.LEFT);
-		}
-
-	}
-
-	public enum ButtonSide implements TranslatableEnum {
+	public enum ButtonSide {
 		LEFT, RIGHT;
 
-		@Override
 		public Component getTranslatedName() {
 			return Component.translatable("traderefresh.configuration.enum.buttonSide." + name());
 		}
 	}
 
+	public static class Client {
+		public boolean showEnchProperties = false;
+		public ButtonSide buttonSide = ButtonSide.LEFT;
+	}
+
 	public static class Server {
-
-		public final ModConfigSpec.BooleanValue alwaysAllowRefresh;
-		public final ModConfigSpec.BooleanValue allowEmeraldBlockForceRestock;
-
-		Server(ModConfigSpec.Builder builder) {
-			alwaysAllowRefresh = builder.comment("Always allow refreshing trade.")
-					.comment(" Only trades added at current villager level will be refreshed.")
-					.define("alwaysAllowRefresh", false);
-			allowEmeraldBlockForceRestock = builder.comment("Allow player to use emerald block to force restock")
-					.define("allowEmeraldBlockForceRestock", true);
-		}
-
+		public boolean alwaysAllowRefresh = false;
+		public boolean allowEmeraldBlockForceRestock = true;
 	}
 
-	public static final ModConfigSpec CLIENT_SPEC;
-	public static final Client CLIENT;
+	public static Client CLIENT = new Client();
+	public static Server SERVER = new Server();
 
-	public static final ModConfigSpec SERVER_SPEC;
-	public static final Server SERVER;
-
-	static {
-		final Pair<Client, ModConfigSpec> client = new ModConfigSpec.Builder().configure(Client::new);
-		CLIENT_SPEC = client.getRight();
-		CLIENT = client.getLeft();
-
-		final Pair<Server, ModConfigSpec> common = new ModConfigSpec.Builder().configure(Server::new);
-		SERVER_SPEC = common.getRight();
-		SERVER = common.getLeft();
-	}
+	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	private static Path clientFile;
+	private static Path serverFile;
 
 	public static void init() {
-		register(ModConfig.Type.CLIENT, CLIENT_SPEC);
-		register(ModConfig.Type.SERVER, SERVER_SPEC);
+		Path configDir = FabricLoader.getInstance().getConfigDir();
+		clientFile = configDir.resolve("traderefresh-client.json");
+		serverFile = configDir.resolve("traderefresh-server.json");
+		CLIENT = load(clientFile, Client.class);
+		SERVER = load(serverFile, Server.class);
+		saveClient();
+		saveServer();
 	}
 
-	private static void register(ModConfig.Type type, IConfigSpec spec) {
-		var mod = ModLoadingContext.get().getActiveContainer();
-		String path = mod.getModId() + "-" + type.extension() + ".toml";
-		ModLoadingContext.get().getActiveContainer().registerConfig(type, spec, path);
+	private static <T> T load(Path path, Class<T> clazz) {
+		if (Files.exists(path)) {
+			try {
+				String json = Files.readString(path);
+				T result = GSON.fromJson(json, clazz);
+				if (result != null) return result;
+			} catch (IOException | com.google.gson.JsonSyntaxException e) {
+				TradeRefresh.LOGGER.error("Failed to read config {}", path, e);
+			}
+		}
+		try {
+			return clazz.getDeclaredConstructor().newInstance();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private static void save(Path path, Object config) {
+		try {
+			Files.createDirectories(path.getParent());
+			Files.writeString(path, GSON.toJson(config));
+		} catch (IOException e) {
+			TradeRefresh.LOGGER.error("Failed to write config {}", path, e);
+		}
+	}
+
+	public static void saveClient() {
+		if (clientFile != null) save(clientFile, CLIENT);
+	}
+
+	public static void saveServer() {
+		if (serverFile != null) save(serverFile, SERVER);
 	}
 
 }

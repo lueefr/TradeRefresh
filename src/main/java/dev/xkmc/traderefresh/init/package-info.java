@@ -3,6 +3,6 @@
 
 package dev.xkmc.traderefresh.init;
 
-import com.mojang.logging.annotations.MethodsReturnNonnullByDefault;
+import net.minecraft.util.MethodsReturnNonnullByDefault;
 
 import javax.annotation.ParametersAreNonnullByDefault;
